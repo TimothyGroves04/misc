@@ -35,7 +35,7 @@ cd misc
 
 2. Install the required dependency:
 ```bash
-pip install openpyxl
+pip install -r requirements.txt
 ```
 
 ## Usage
