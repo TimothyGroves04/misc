@@ -313,6 +313,44 @@ for label, unit, hist, is_section, is_total in is_items:
 
     r += 1
 
+# Pre-compute BS and CF row positions from label lists.
+# This avoids hard-coding row numbers for cross-sheet references.
+# The labels must match exactly those used when building each sheet.
+_bs_labels = [
+    "ASSETS", "Current Assets", "Cash & cash equivalents",
+    "Trade & other receivables", "Other current assets", "Total Current Assets",
+    "", "Non-Current Assets", "Property, plant & equipment",
+    "Intangible assets (concessions)", "Investments in joint ventures",
+    "Other non-current assets", "Total Non-Current Assets", "",
+    "Total Assets", "", "LIABILITIES", "Current Liabilities",
+    "Trade & other payables", "Current borrowings", "Other current liabilities",
+    "Total Current Liabilities", "", "Non-Current Liabilities",
+    "Non-current borrowings", "Other non-current liabilities",
+    "Total Non-Current Liabilities",
+    "Total Borrowings (current + non-current)", "", "Total Liabilities",
+    "", "EQUITY", "Share capital", "Retained earnings / (losses)",
+    "Reserves", "Total Equity", "", "Total Liabilities & Equity",
+    "", "Balance Sheet Check (Assets - L&E)",
+]
+_bs_row_map = {lbl: 5 + i for i, lbl in enumerate(_bs_labels)}
+BS_NCA_ROW = _bs_row_map["Total Non-Current Assets"]
+BS_DEBT_ROW = _bs_row_map["Total Borrowings (current + non-current)"]
+
+_cf_labels = [
+    "OPERATING ACTIVITIES", "Net profit / (loss) after tax", "Add back: D&A",
+    "Changes in working capital", "Other operating adjustments",
+    "Net Cash from Operating Activities", "",
+    "INVESTING ACTIVITIES", "Capital expenditure", "Other investing activities",
+    "Net Cash from Investing Activities", "",
+    "FINANCING ACTIVITIES", "Proceeds from / (repayment of) borrowings",
+    "Dividends / distributions paid", "Equity issuance (DRP & placements)",
+    "Net Cash from Financing Activities", "",
+    "Net increase / (decrease) in cash", "FX & other adjustments",
+    "Opening cash balance", "Closing Cash Balance",
+]
+_cf_row_map = {lbl: 5 + i for i, lbl in enumerate(_cf_labels)}
+CF_CLOSE_CASH_ROW = _cf_row_map["Closing Cash Balance"]
+
 # -- Forecast formulas (FY26-FY30) --
 # Toll revenue: prior year * (1 + toll growth assumption)
 for fc_idx in range(5):
@@ -365,13 +403,8 @@ for fc_idx in range(5):
     ws_is.cell(row=row_ebitda, column=col, value=formula).number_format = acct_fmt
 
     # D&A  (linked to BS non-current assets via assumption %)
-    # We reference the Balance Sheet NCA at the start of the year (prior period)
-    # For now reference assumption directly: D&A = NCA (prior year) * D&A%
-    # NCA row will be defined later — we'll use a placeholder referencing BS
-    row_da = IS_ROW["Depreciation & amortisation"]
     # D&A = -(opening NCA * D&A %)  -- opening NCA is prior year's closing NCA
-    # BS NCA row will be row 17 on Balance Sheet (set below)
-    BS_NCA_ROW = 17  # Total Non-Current Assets row on BS
+    row_da = IS_ROW["Depreciation & amortisation"]
     prev_cl = get_column_letter(col - 1)
     formula = f"=-'Balance Sheet'!{prev_cl}{BS_NCA_ROW}*Assumptions!{cl}{AROW_DA_PCT}"
     ws_is.cell(row=row_da, column=col, value=formula).number_format = acct_fmt
@@ -382,9 +415,8 @@ for fc_idx in range(5):
     ws_is.cell(row=row_ebit, column=col, value=formula).number_format = acct_fmt
 
     # Net finance costs = -(avg debt * cost of debt)
-    # Avg debt = (opening + closing) / 2, but to avoid circular ref we use opening debt
+    # Use opening debt to avoid circular reference
     row_nfc = IS_ROW["Net finance costs"]
-    BS_DEBT_ROW = 32  # Total borrowings row on BS (will set below)
     formula = f"=-'Balance Sheet'!{prev_cl}{BS_DEBT_ROW}*Assumptions!{cl}{AROW_COD}"
     ws_is.cell(row=row_nfc, column=col, value=formula).number_format = acct_fmt
 
@@ -534,14 +566,11 @@ for label, unit, hist, is_section, is_total in bs_items:
 
     r += 1
 
-# Update BS row constants used in IS formulas
-# Total Non-Current Assets row
+# Verify pre-computed row positions match actual
 actual_bs_nca_row = BS_ROW["Total Non-Current Assets"]
 actual_bs_debt_row = BS_ROW["Total Borrowings (current + non-current)"]
-
-# We assumed BS_NCA_ROW = 18, BS_DEBT_ROW = 27 in the IS formulas.
-# Let's verify and fix if needed.
-assert actual_bs_nca_row == 17, f"BS NCA row is {actual_bs_nca_row}, expected 17"
+assert actual_bs_nca_row == BS_NCA_ROW, f"BS NCA row mismatch: {actual_bs_nca_row} != {BS_NCA_ROW}"
+assert actual_bs_debt_row == BS_DEBT_ROW, f"BS debt row mismatch: {actual_bs_debt_row} != {BS_DEBT_ROW}"
 
 # Now write BS check formulas for historical
 row_ta = BS_ROW["Total Assets"]
@@ -590,8 +619,6 @@ for fc_idx in range(5):
 
     # -- ASSETS --
     # Cash comes from Cash Flow Statement (closing cash)
-    # CF closing cash row will be set later
-    CF_CLOSE_CASH_ROW = 26  # placeholder, will verify
     ws_bs.cell(row=row_cash, column=col,
                value=f"='Cash Flow Statement'!{cl}{CF_CLOSE_CASH_ROW}").number_format = acct_fmt
 
@@ -796,20 +823,10 @@ for label, unit, hist, is_section, is_total in cf_items:
 
     r += 1
 
-# Verify CF closing cash row
+# Verify pre-computed CF row positions match actual
 actual_cf_close_row = CF_ROW["Closing Cash Balance"]
-# Update the BS cash reference if needed
-# We assumed CF_CLOSE_CASH_ROW = 24 — let's check
-assert actual_cf_close_row == 26, f"CF Closing Cash row is {actual_cf_close_row}, expected 26"
-
-# We need to go back and fix the BS cash reference
-# BS cash formula references CF_CLOSE_CASH_ROW which we set to 24
-# The actual row is 27, so let's update those formulas
-for fc_idx in range(5):
-    col = FC_START + fc_idx
-    cl = get_column_letter(col)
-    ws_bs.cell(row=row_cash, column=col,
-               value=f"='Cash Flow Statement'!{cl}{actual_cf_close_row}").number_format = acct_fmt
+assert actual_cf_close_row == CF_CLOSE_CASH_ROW, \
+    f"CF close row mismatch: {actual_cf_close_row} != {CF_CLOSE_CASH_ROW}"
 
 # ---- FORECAST FORMULAS FOR CASH FLOW (FY26-FY30) ----
 cf_npat_row = CF_ROW["Net profit / (loss) after tax"]
