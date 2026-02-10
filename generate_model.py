@@ -926,16 +926,476 @@ for i in range(HIST_START, MAX_COL + 1):
     ws_cf.column_dimensions[get_column_letter(i)].width = 15
 
 # ---------------------------------------------------------------------------
-# 5.  FINAL FORMATTING PASS
+# 5.  NOTES TO THE FINANCIAL STATEMENTS  (Sheet 5)
+# ---------------------------------------------------------------------------
+ws_notes = wb.create_sheet("Notes")
+ws_notes.sheet_properties.tabColor = "7030A0"  # Purple
+
+ws_notes.merge_cells("A1:L1")
+ws_notes["A1"] = "Transurban Group – Notes to the Financial Statements"
+ws_notes["A1"].font = Font(name="Calibri", bold=True, size=14, color=DARK_BLUE)
+ws_notes.row_dimensions[1].height = 30
+
+ws_notes.merge_cells("A2:L2")
+ws_notes["A2"] = "A$ millions  |  Fiscal year ends 30 June"
+ws_notes["A2"].font = Font(name="Calibri", italic=True, size=10, color="666666")
+
+# Header row (row 4)
+r = 4
+ws_notes.cell(row=r, column=LABEL_COL, value="Notes")
+ws_notes.cell(row=r, column=UNIT_COL, value="")
+for i, fy in enumerate(FY_LABELS):
+    ws_notes.cell(row=r, column=HIST_START + i, value=fy)
+style_header_row(ws_notes, r, MAX_COL)
+
+# Historical construction revenue data
+hist_construction_rev = [180, 320, 540, 420, 350]
+
+# Historical segment data
+hist_melb_rev = [820, 920, 1080, 1150, 1220]
+hist_melb_ebitda = [620, 710, 840, 900, 960]
+hist_syd_rev = [1050, 1220, 1520, 1680, 1800]
+hist_syd_ebitda = [750, 890, 1120, 1250, 1350]
+hist_bris_rev = [430, 480, 560, 600, 640]
+hist_bris_ebitda = [310, 350, 410, 440, 470]
+hist_na_rev = [478, 521, 627, 652, 690]
+hist_na_ebitda = [120, 150, 205, 230, 260]
+
+# Historical intangible assets data
+hist_intang_opening = [22100, 22630, 23310, 24460, 25340]
+hist_intang_additions = [530, 680, 1150, 880, 720]
+
+# Historical borrowings maturity data
+hist_maturity_1_2yr = [1100, 1250, 1400, 1150, 1050]
+hist_maturity_2_5yr = [5200, 5650, 6300, 6400, 6500]
+
+# Historical borrowing costs data
+hist_cap_borrow_costs = [45, 78, 125, 95, 80]
+
+# Historical tax adjustment data
+hist_non_ded_amort = [215, 210, 205, 195, 190]
+hist_tax_concessions = [-50, -48, -45, -42, -40]
+hist_other_perm_diff = [25, 20, 15, 10, 8]
+
+# Historical commitments data
+hist_cap_commit = [2800, 3200, 2500, 1800, 1500]
+hist_op_lease_commit = [85, 90, 95, 100, 105]
+hist_contingent_liab = [150, 150, 160, 160, 170]
+
+# Define all note items with their data
+notes_items = [
+    # Note 1: Revenue Breakdown
+    ("REVENUE BREAKDOWN", None, None, True, False, False),
+    ("Toll revenue", "A$m", "link_is_toll", False, False, False),
+    ("Construction revenue", "A$m", hist_construction_rev, False, False, False),
+    ("Other revenue", "A$m", "link_is_other", False, False, False),
+    ("Total Revenue", "A$m", "link_is_total_rev", False, True, False),
+    ("", None, None, False, False, False),
+    
+    # Note 2: Segment Reporting
+    ("SEGMENT REPORTING", None, None, True, False, False),
+    ("Melbourne (CityLink)", None, None, False, False, False),
+    ("  Revenue", "A$m", hist_melb_rev, False, False, False),
+    ("  EBITDA", "A$m", hist_melb_ebitda, False, False, False),
+    ("Sydney", None, None, False, False, False),
+    ("  Revenue", "A$m", hist_syd_rev, False, False, False),
+    ("  EBITDA", "A$m", hist_syd_ebitda, False, False, False),
+    ("Brisbane", None, None, False, False, False),
+    ("  Revenue", "A$m", hist_bris_rev, False, False, False),
+    ("  EBITDA", "A$m", hist_bris_ebitda, False, False, False),
+    ("North America", None, None, False, False, False),
+    ("  Revenue", "A$m", hist_na_rev, False, False, False),
+    ("  EBITDA", "A$m", hist_na_ebitda, False, False, False),
+    ("Total segment revenue", "A$m", "sum_segment_rev", False, True, False),
+    ("Total segment EBITDA", "A$m", "sum_segment_ebitda", False, True, False),
+    ("Reconciliation to IS EBITDA", "A$m", "link_is_ebitda", False, True, False),
+    ("", None, None, False, False, False),
+    
+    # Note 3: Intangible Assets
+    ("INTANGIBLE ASSETS (CONCESSION RIGHTS)", None, None, True, False, False),
+    ("Opening balance", "A$m", hist_intang_opening, False, False, False),
+    ("Additions (capitalised construction)", "A$m", hist_intang_additions, False, False, False),
+    ("Amortisation charge", "A$m", "link_is_da_60pct", False, False, False),
+    ("Closing balance", "A$m", "calc_intang_close", False, True, False),
+    ("Cross-check to BS", "A$m", "link_bs_intang", False, True, True),
+    ("", None, None, False, False, False),
+    
+    # Note 4: Borrowings
+    ("BORROWINGS", None, None, True, False, False),
+    ("Current borrowings", "A$m", "link_bs_current_debt", False, False, False),
+    ("Non-current borrowings", "A$m", "link_bs_nc_debt", False, False, False),
+    ("Total borrowings", "A$m", "link_bs_total_debt", False, True, False),
+    ("", None, None, False, False, False),
+    ("Maturity Profile", None, None, False, False, False),
+    ("  Within 1 year", "A$m", "link_current_debt", False, False, False),
+    ("  1-2 years", "A$m", hist_maturity_1_2yr, False, False, False),
+    ("  2-5 years", "A$m", hist_maturity_2_5yr, False, False, False),
+    ("  Over 5 years", "A$m", "calc_over_5yr", False, False, False),
+    ("  Total (maturity check)", "A$m", "sum_maturity", False, True, True),
+    ("", None, None, False, False, False),
+    ("Borrowing Costs", None, None, False, False, False),
+    ("  Interest expense", "A$m", "link_is_interest", False, False, False),
+    ("  Capitalised borrowing costs", "A$m", hist_cap_borrow_costs, False, False, False),
+    ("  Effective interest rate", "%", "link_assum_cod", False, False, False),
+    ("", None, None, False, False, False),
+    
+    # Note 5: Income Tax
+    ("INCOME TAX", None, None, True, False, False),
+    ("Profit before tax", "A$m", "link_is_pbt", False, False, False),
+    ("Tax at statutory rate (30%)", "A$m", "calc_tax_30pct", False, False, False),
+    ("Tax effect adjustments:", None, None, False, False, False),
+    ("  Non-deductible amortisation", "A$m", hist_non_ded_amort, False, False, False),
+    ("  Tax concessions & offsets", "A$m", hist_tax_concessions, False, False, False),
+    ("  Other permanent differences", "A$m", hist_other_perm_diff, False, False, False),
+    ("Total tax adjustments", "A$m", "sum_tax_adj", False, True, False),
+    ("Income tax expense", "A$m", "link_is_tax", False, True, False),
+    ("Effective tax rate", "%", "calc_etr", False, False, False),
+    ("ETR per Assumptions", "%", "link_assum_tax", False, False, True),
+    ("", None, None, False, False, False),
+    
+    # Note 6: Dividends/Distributions
+    ("DIVIDENDS / DISTRIBUTIONS", None, None, True, False, False),
+    ("DPS (cents per security)", "A¢", "link_assum_dps", False, False, False),
+    ("Securities on issue (m)", "m", "link_assum_shares", False, False, False),
+    ("Total distributions paid", "A$m", "link_cf_div", False, False, False),
+    ("Payout ratio (% of NPAT)", "%", "calc_payout", False, False, False),
+    ("Franking credits", "A$m", [0, 0, 0, 0, 0], False, False, False),
+    ("", None, None, False, False, False),
+    
+    # Note 7: Commitments & Contingencies
+    ("COMMITMENTS & CONTINGENCIES", None, None, True, False, False),
+    ("Capital commitments", "A$m", hist_cap_commit, False, False, False),
+    ("Operating lease commitments", "A$m", hist_op_lease_commit, False, False, False),
+    ("Contingent liabilities", "A$m", hist_contingent_liab, False, False, False),
+]
+
+NOTES_ROW = {}
+r = 5
+for label, unit, data, is_section, is_total, is_check in notes_items:
+    ws_notes.cell(row=r, column=LABEL_COL, value=label)
+    if unit:
+        ws_notes.cell(row=r, column=UNIT_COL, value=unit)
+    NOTES_ROW[label] = r
+    
+    if is_section:
+        style_section_row(ws_notes, r, MAX_COL)
+    elif is_total:
+        for c in range(1, MAX_COL + 1):
+            ws_notes.cell(row=r, column=c).font = total_font
+            if is_check:
+                ws_notes.cell(row=r, column=c).border = double_bottom
+            else:
+                ws_notes.cell(row=r, column=c).border = thick_bottom
+    
+    # Write historical values or formulas
+    if data is not None and isinstance(data, list):
+        # Hard-coded historical data
+        for i, v in enumerate(data):
+            col = HIST_START + i
+            cell = ws_notes.cell(row=r, column=col, value=v)
+            if unit == "%":
+                cell.number_format = pct_fmt
+            elif unit in ["A$m", "A¢", "m", "days"]:
+                cell.number_format = acct_fmt if unit == "A$m" else num_fmt
+    
+    r += 1
+
+# Now add formulas for historical and forecast periods
+# Note 1: Revenue Breakdown
+row_toll = NOTES_ROW["Toll revenue"]
+row_construction = NOTES_ROW["Construction revenue"]
+row_other_rev = NOTES_ROW["Other revenue"]
+row_total_rev_note = NOTES_ROW["Total Revenue"]
+
+for col_idx in range(10):  # FY21-FY30
+    col = HIST_START + col_idx
+    cl = get_column_letter(col)
+    prev_cl = get_column_letter(col - 1)
+    
+    # Toll revenue - link to IS
+    ws_notes.cell(row=row_toll, column=col,
+                  value=f"='Income Statement'!{cl}{IS_ROW['Toll revenue']}").number_format = acct_fmt
+    
+    # Construction revenue - historical hard-coded, forecast grows at 3%
+    if col >= FC_START:
+        ws_notes.cell(row=row_construction, column=col,
+                      value=f"={prev_cl}{row_construction}*1.03").number_format = acct_fmt
+    
+    # Other revenue - link to IS
+    ws_notes.cell(row=row_other_rev, column=col,
+                  value=f"='Income Statement'!{cl}{IS_ROW['Other revenue']}").number_format = acct_fmt
+    
+    # Total Revenue - link to IS
+    ws_notes.cell(row=row_total_rev_note, column=col,
+                  value=f"='Income Statement'!{cl}{IS_ROW['Total Revenue']}").number_format = acct_fmt
+
+# Note 2: Segment Reporting (historical only, no forecast formulas)
+row_melb_rev = NOTES_ROW["  Revenue"] + 1  # Melbourne revenue row
+row_melb_ebitda = NOTES_ROW["  Revenue"] + 2  # First EBITDA after first revenue
+row_syd_rev = NOTES_ROW["  Revenue"] + 4
+row_syd_ebitda = NOTES_ROW["  Revenue"] + 5
+row_bris_rev = NOTES_ROW["  Revenue"] + 7
+row_bris_ebitda = NOTES_ROW["  Revenue"] + 8
+row_na_rev = NOTES_ROW["  Revenue"] + 10
+row_na_ebitda = NOTES_ROW["  Revenue"] + 11
+row_total_seg_rev = NOTES_ROW["Total segment revenue"]
+row_total_seg_ebitda = NOTES_ROW["Total segment EBITDA"]
+row_recon_ebitda = NOTES_ROW["Reconciliation to IS EBITDA"]
+
+# Recalculate actual segment row positions
+segment_rows = {}
+temp_r = 5
+for label, unit, data, is_section, is_total, is_check in notes_items:
+    segment_rows[label] = temp_r
+    temp_r += 1
+
+row_melb_rev = segment_rows["  Revenue"]
+row_melb_ebitda = row_melb_rev + 1
+# Find Sydney revenue by searching forward
+temp_r = row_melb_rev + 2
+for label, unit, data, is_section, is_total, is_check in notes_items:
+    if label == "Sydney":
+        row_syd_rev = temp_r + 1
+        row_syd_ebitda = temp_r + 2
+        row_bris_rev = temp_r + 4
+        row_bris_ebitda = temp_r + 5
+        row_na_rev = temp_r + 7
+        row_na_ebitda = temp_r + 8
+        break
+    temp_r += 1
+
+for col_idx in range(5):  # Historical only FY21-FY25
+    col = HIST_START + col_idx
+    cl = get_column_letter(col)
+    
+    # Total segment revenue = sum of all segment revenues
+    ws_notes.cell(row=row_total_seg_rev, column=col,
+                  value=f"={cl}{row_melb_rev}+{cl}{row_syd_rev}+{cl}{row_bris_rev}+{cl}{row_na_rev}").number_format = acct_fmt
+    
+    # Total segment EBITDA = sum of all segment EBITDAs
+    ws_notes.cell(row=row_total_seg_ebitda, column=col,
+                  value=f"={cl}{row_melb_ebitda}+{cl}{row_syd_ebitda}+{cl}{row_bris_ebitda}+{cl}{row_na_ebitda}").number_format = acct_fmt
+    
+    # Reconciliation to IS EBITDA
+    ws_notes.cell(row=row_recon_ebitda, column=col,
+                  value=f"='Income Statement'!{cl}{IS_ROW['EBITDA']}").number_format = acct_fmt
+
+# Note 3: Intangible Assets
+row_intang_open = NOTES_ROW["Opening balance"]
+row_intang_add = NOTES_ROW["Additions (capitalised construction)"]
+row_intang_amort = NOTES_ROW["Amortisation charge"]
+row_intang_close = NOTES_ROW["Closing balance"]
+row_intang_check = NOTES_ROW["Cross-check to BS"]
+
+for col_idx in range(10):  # FY21-FY30
+    col = HIST_START + col_idx
+    cl = get_column_letter(col)
+    prev_cl = get_column_letter(col - 1)
+    
+    # Opening balance - for FY21 use hard-coded, for others use prior year closing
+    if col > HIST_START:
+        ws_notes.cell(row=row_intang_open, column=col,
+                      value=f"={prev_cl}{row_intang_close}").number_format = acct_fmt
+    
+    # Additions - historical hard-coded, forecast links to construction revenue
+    if col >= FC_START:
+        ws_notes.cell(row=row_intang_add, column=col,
+                      value=f"={cl}{row_construction}").number_format = acct_fmt
+    
+    # Amortisation charge - link to IS D&A * 0.60
+    ws_notes.cell(row=row_intang_amort, column=col,
+                  value=f"='Income Statement'!{cl}{IS_ROW['Depreciation & amortisation']}*0.60").number_format = acct_fmt
+    
+    # Closing balance = Opening + Additions + Amortisation (amort is negative)
+    ws_notes.cell(row=row_intang_close, column=col,
+                  value=f"={cl}{row_intang_open}+{cl}{row_intang_add}+{cl}{row_intang_amort}").number_format = acct_fmt
+    
+    # Cross-check to BS
+    ws_notes.cell(row=row_intang_check, column=col,
+                  value=f"='Balance Sheet'!{cl}{BS_ROW['Intangible assets (concessions)']}").number_format = acct_fmt
+
+# Note 4: Borrowings
+row_curr_debt = NOTES_ROW["Current borrowings"]
+row_nc_debt = NOTES_ROW["Non-current borrowings"]
+row_total_debt = NOTES_ROW["Total borrowings"]
+row_mat_within_1 = NOTES_ROW["  Within 1 year"]
+row_mat_1_2 = NOTES_ROW["  1-2 years"]
+row_mat_2_5 = NOTES_ROW["  2-5 years"]
+row_mat_over_5 = NOTES_ROW["  Over 5 years"]
+row_mat_total = NOTES_ROW["  Total (maturity check)"]
+row_interest = NOTES_ROW["  Interest expense"]
+row_cap_costs = NOTES_ROW["  Capitalised borrowing costs"]
+row_eff_rate = NOTES_ROW["  Effective interest rate"]
+
+for col_idx in range(10):  # FY21-FY30
+    col = HIST_START + col_idx
+    cl = get_column_letter(col)
+    
+    # Link to BS borrowings
+    ws_notes.cell(row=row_curr_debt, column=col,
+                  value=f"='Balance Sheet'!{cl}{BS_ROW['Current borrowings']}").number_format = acct_fmt
+    ws_notes.cell(row=row_nc_debt, column=col,
+                  value=f"='Balance Sheet'!{cl}{BS_ROW['Non-current borrowings']}").number_format = acct_fmt
+    ws_notes.cell(row=row_total_debt, column=col,
+                  value=f"='Balance Sheet'!{cl}{BS_ROW['Total Borrowings (current + non-current)']}").number_format = acct_fmt
+    
+    # Maturity profile
+    # Within 1 year = current borrowings
+    ws_notes.cell(row=row_mat_within_1, column=col,
+                  value=f"={cl}{row_curr_debt}").number_format = acct_fmt
+    
+    # 1-2 years - historical hard-coded, forecast = 5% of total
+    if col >= FC_START:
+        ws_notes.cell(row=row_mat_1_2, column=col,
+                      value=f"={cl}{row_total_debt}*0.05").number_format = acct_fmt
+    
+    # 2-5 years - historical hard-coded, forecast = 26% of total
+    if col >= FC_START:
+        ws_notes.cell(row=row_mat_2_5, column=col,
+                      value=f"={cl}{row_total_debt}*0.26").number_format = acct_fmt
+    
+    # Over 5 years = Total - within 1yr - 1-2yr - 2-5yr
+    ws_notes.cell(row=row_mat_over_5, column=col,
+                  value=f"={cl}{row_total_debt}-{cl}{row_mat_within_1}-{cl}{row_mat_1_2}-{cl}{row_mat_2_5}").number_format = acct_fmt
+    
+    # Total maturity check
+    ws_notes.cell(row=row_mat_total, column=col,
+                  value=f"={cl}{row_mat_within_1}+{cl}{row_mat_1_2}+{cl}{row_mat_2_5}+{cl}{row_mat_over_5}").number_format = acct_fmt
+    
+    # Interest expense - link to IS with sign flip
+    ws_notes.cell(row=row_interest, column=col,
+                  value=f"=-'Income Statement'!{cl}{IS_ROW['Net finance costs']}").number_format = acct_fmt
+    
+    # Capitalised borrowing costs - historical hard-coded, forecast formula
+    if col >= FC_START:
+        ws_notes.cell(row=row_cap_costs, column=col,
+                      value=f"=Assumptions!{cl}{AROW_CAPEX}*Assumptions!{cl}{AROW_COD}*0.15").number_format = acct_fmt
+    
+    # Effective interest rate - link to Assumptions
+    ws_notes.cell(row=row_eff_rate, column=col,
+                  value=f"=Assumptions!{cl}{AROW_COD}").number_format = pct_fmt
+
+# Note 5: Income Tax
+row_pbt = NOTES_ROW["Profit before tax"]
+row_tax_30 = NOTES_ROW["Tax at statutory rate (30%)"]
+row_non_ded = NOTES_ROW["  Non-deductible amortisation"]
+row_tax_conc = NOTES_ROW["  Tax concessions & offsets"]
+row_other_perm = NOTES_ROW["  Other permanent differences"]
+row_total_adj = NOTES_ROW["Total tax adjustments"]
+row_tax_exp = NOTES_ROW["Income tax expense"]
+row_etr = NOTES_ROW["Effective tax rate"]
+row_etr_assum = NOTES_ROW["ETR per Assumptions"]
+
+for col_idx in range(10):  # FY21-FY30
+    col = HIST_START + col_idx
+    cl = get_column_letter(col)
+    
+    # PBT - link to IS
+    ws_notes.cell(row=row_pbt, column=col,
+                  value=f"='Income Statement'!{cl}{IS_ROW['Profit / (Loss) before tax']}").number_format = acct_fmt
+    
+    # Tax at 30%
+    ws_notes.cell(row=row_tax_30, column=col,
+                  value=f"={cl}{row_pbt}*-0.30").number_format = acct_fmt
+    
+    # Adjustments - historical hard-coded, forecast holds flat
+    if col >= FC_START:
+        ws_notes.cell(row=row_non_ded, column=col, value=190).number_format = acct_fmt
+        ws_notes.cell(row=row_tax_conc, column=col, value=-40).number_format = acct_fmt
+        ws_notes.cell(row=row_other_perm, column=col, value=8).number_format = acct_fmt
+    
+    # Total tax adjustments
+    ws_notes.cell(row=row_total_adj, column=col,
+                  value=f"={cl}{row_non_ded}+{cl}{row_tax_conc}+{cl}{row_other_perm}").number_format = acct_fmt
+    
+    # Income tax expense - link to IS
+    ws_notes.cell(row=row_tax_exp, column=col,
+                  value=f"='Income Statement'!{cl}{IS_ROW['Income tax (expense) / benefit']}").number_format = acct_fmt
+    
+    # Effective tax rate
+    ws_notes.cell(row=row_etr, column=col,
+                  value=f"={cl}{row_tax_exp}/{cl}{row_pbt}").number_format = pct_fmt
+    
+    # ETR per Assumptions
+    ws_notes.cell(row=row_etr_assum, column=col,
+                  value=f"=Assumptions!{cl}{AROW_TAX}").number_format = pct_fmt
+
+# Note 6: Dividends/Distributions
+row_dps = NOTES_ROW["DPS (cents per security)"]
+row_shares = NOTES_ROW["Securities on issue (m)"]
+row_dist_paid = NOTES_ROW["Total distributions paid"]
+row_payout = NOTES_ROW["Payout ratio (% of NPAT)"]
+row_franking = NOTES_ROW["Franking credits"]
+
+for col_idx in range(10):  # FY21-FY30
+    col = HIST_START + col_idx
+    cl = get_column_letter(col)
+    
+    # DPS - link to Assumptions
+    ws_notes.cell(row=row_dps, column=col,
+                  value=f"=Assumptions!{cl}{AROW_DPS}").number_format = num_fmt
+    
+    # Securities on issue - link to Assumptions
+    ws_notes.cell(row=row_shares, column=col,
+                  value=f"=Assumptions!{cl}{AROW_SHARES}").number_format = num_fmt
+    
+    # Total distributions paid - link to CF
+    ws_notes.cell(row=row_dist_paid, column=col,
+                  value=f"='Cash Flow Statement'!{cl}{CF_ROW['Dividends / distributions paid']}").number_format = acct_fmt
+    
+    # Payout ratio
+    ws_notes.cell(row=row_payout, column=col,
+                  value=f"=-{cl}{row_dist_paid}/'Income Statement'!{cl}{IS_ROW['Net Profit / (Loss) After Tax']}").number_format = pct_fmt
+    
+    # Franking credits - hold at 0 for forecast
+    if col >= FC_START:
+        ws_notes.cell(row=row_franking, column=col, value=0).number_format = acct_fmt
+
+# Note 7: Commitments & Contingencies
+row_cap_commit = NOTES_ROW["Capital commitments"]
+row_op_lease = NOTES_ROW["Operating lease commitments"]
+row_contingent = NOTES_ROW["Contingent liabilities"]
+
+for col_idx in range(10):  # FY21-FY30
+    col = HIST_START + col_idx
+    cl = get_column_letter(col)
+    prev_cl = get_column_letter(col - 1)
+    
+    # Capital commitments - historical hard-coded, forecast links to capex
+    if col >= FC_START:
+        ws_notes.cell(row=row_cap_commit, column=col,
+                      value=f"=Assumptions!{cl}{AROW_CAPEX}*1.2").number_format = acct_fmt
+    
+    # Operating lease commitments - historical hard-coded, forecast grows at 3%
+    if col >= FC_START:
+        ws_notes.cell(row=row_op_lease, column=col,
+                      value=f"={prev_cl}{row_op_lease}*1.03").number_format = acct_fmt
+    
+    # Contingent liabilities - historical hard-coded, forecast holds flat
+    if col >= FC_START:
+        ws_notes.cell(row=row_contingent, column=col, value=170).number_format = acct_fmt
+
+# Shade forecast columns for all note rows
+for rr in range(5, r):
+    for col in range(FC_START, FC_END + 1):
+        mark_forecast_cols(ws_notes, rr, col, col)
+
+# Set column widths
+set_col_widths(ws_notes, {"A": 40, "B": 10})
+for i in range(HIST_START, MAX_COL + 1):
+    ws_notes.column_dimensions[get_column_letter(i)].width = 15
+
+# ---------------------------------------------------------------------------
+# 6.  FINAL FORMATTING PASS
 # ---------------------------------------------------------------------------
 
 # Freeze panes and print settings for each sheet
-for ws in [ws_a, ws_is, ws_bs, ws_cf]:
+for ws in [ws_a, ws_is, ws_bs, ws_cf, ws_notes]:
     ws.freeze_panes = f"C5"
     ws.sheet_view.showGridLines = False
 
 # ---------------------------------------------------------------------------
-# 6.  SAVE
+# 7.  SAVE
 # ---------------------------------------------------------------------------
 OUTPUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            "Transurban_Group_3Way_Financial_Model.xlsx")
