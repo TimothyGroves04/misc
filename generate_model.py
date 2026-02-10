@@ -1130,39 +1130,18 @@ for col_idx in range(10):  # FY21-FY30
                   value=f"='Income Statement'!{cl}{IS_ROW['Total Revenue']}").number_format = acct_fmt
 
 # Note 2: Segment Reporting (historical only, no forecast formulas)
-row_melb_rev = NOTES_ROW["  Revenue"] + 1  # Melbourne revenue row
-row_melb_ebitda = NOTES_ROW["  Revenue"] + 2  # First EBITDA after first revenue
-row_syd_rev = NOTES_ROW["  Revenue"] + 4
-row_syd_ebitda = NOTES_ROW["  Revenue"] + 5
-row_bris_rev = NOTES_ROW["  Revenue"] + 7
-row_bris_ebitda = NOTES_ROW["  Revenue"] + 8
-row_na_rev = NOTES_ROW["  Revenue"] + 10
-row_na_ebitda = NOTES_ROW["  Revenue"] + 11
+# Calculate segment row positions based on the known structure
+row_melb_rev = NOTES_ROW["Melbourne (CityLink)"] + 1  # Melbourne revenue is one row after the label
+row_melb_ebitda = row_melb_rev + 1
+row_syd_rev = NOTES_ROW["Sydney"] + 1  # Sydney revenue is one row after the label
+row_syd_ebitda = row_syd_rev + 1
+row_bris_rev = NOTES_ROW["Brisbane"] + 1  # Brisbane revenue is one row after the label
+row_bris_ebitda = row_bris_rev + 1
+row_na_rev = NOTES_ROW["North America"] + 1  # North America revenue is one row after the label
+row_na_ebitda = row_na_rev + 1
 row_total_seg_rev = NOTES_ROW["Total segment revenue"]
 row_total_seg_ebitda = NOTES_ROW["Total segment EBITDA"]
 row_recon_ebitda = NOTES_ROW["Reconciliation to IS EBITDA"]
-
-# Recalculate actual segment row positions
-segment_rows = {}
-temp_r = 5
-for label, unit, data, is_section, is_total, is_check in notes_items:
-    segment_rows[label] = temp_r
-    temp_r += 1
-
-row_melb_rev = segment_rows["  Revenue"]
-row_melb_ebitda = row_melb_rev + 1
-# Find Sydney revenue by searching forward
-temp_r = row_melb_rev + 2
-for label, unit, data, is_section, is_total, is_check in notes_items:
-    if label == "Sydney":
-        row_syd_rev = temp_r + 1
-        row_syd_ebitda = temp_r + 2
-        row_bris_rev = temp_r + 4
-        row_bris_ebitda = temp_r + 5
-        row_na_rev = temp_r + 7
-        row_na_ebitda = temp_r + 8
-        break
-    temp_r += 1
 
 for col_idx in range(5):  # Historical only FY21-FY25
     col = HIST_START + col_idx
