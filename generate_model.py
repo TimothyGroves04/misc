@@ -143,7 +143,7 @@ ws_a["A2"].font = Font(name="Calibri", italic=True, size=10, color="666666")
 ws_a.cell(row=4, column=LABEL_COL, value="SCENARIO TOGGLES")
 style_section_row(ws_a, 4, MAX_COL)
 
-toggle_font = Font(name="Calibri", size=11, color="006100")
+toggle_font = Font(name="Calibri", size=11, color=GREEN_FONT)
 toggle_fill = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
 
 toggle_items = [
@@ -187,20 +187,22 @@ def _write_values(ws, row, vals, is_pct, fmt=None):
 
 
 def _write_active_row(ws, active_row, input_row, toggle_cell):
-    """Write an active row: hist cols reference input, forecast cols use IF."""
-    for i in range(5):  # historical FY21-FY25 (cols C-G)
+    """Write an active row: historical cols reference input, forecast cols use IF."""
+    for i in range(5):  # historical columns
         col = HIST_START + i
         cl = get_column_letter(col)
         cell = ws.cell(row=active_row, column=col)
         cell.value = f"={cl}{input_row}"
         cell.number_format = pct_fmt
         cell.font = normal_font
-    for i in range(5):  # forecast FY26-FY30 (cols H-L)
+    # Last 3 historical columns for 3yr average
+    avg_start = get_column_letter(HIST_END - 2)
+    avg_end = get_column_letter(HIST_END)
+    for i in range(5):  # forecast columns
         col = FC_START + i
         cl = get_column_letter(col)
-        # Last 3 hist cols are E, F, G (FY23-FY25)
         cell = ws.cell(row=active_row, column=col)
-        cell.value = f'=IF({toggle_cell}="3yr Avg",AVERAGE(E{input_row}:G{input_row}),{cl}{input_row})'
+        cell.value = f'=IF({toggle_cell}="3yr Avg",AVERAGE({avg_start}{input_row}:{avg_end}{input_row}),{cl}{input_row})'
         cell.number_format = pct_fmt
         cell.font = input_font
         cell.fill = forecast_fill
