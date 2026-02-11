@@ -1644,9 +1644,12 @@ for i in range(HIST_START, MAX_COL + 1):
 # ---------------------------------------------------------------------------
 
 # Freeze panes and print settings for each sheet
-for ws in [ws_a, ws_is, ws_bs, ws_cf, ws_notes]:
-    ws.freeze_panes = f"C5"
+for ws in [ws_is, ws_bs, ws_cf, ws_notes]:
+    ws.freeze_panes = "C5"
     ws.sheet_view.showGridLines = False
+# Assumptions sheet has headers at row 12, so freeze below row 12
+ws_a.freeze_panes = "C13"
+ws_a.sheet_view.showGridLines = False
 
 # ---------------------------------------------------------------------------
 # 7.  SAVE
