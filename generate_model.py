@@ -139,85 +139,356 @@ ws_a.merge_cells("A2:L2")
 ws_a["A2"] = "All figures in A$ millions unless otherwise stated.  Fiscal year ends 30 June."
 ws_a["A2"].font = Font(name="Calibri", italic=True, size=10, color="666666")
 
-# Column headers  (row 4)
-r = 4
+# -- Row 4: SCENARIO TOGGLES section header --
+ws_a.cell(row=4, column=LABEL_COL, value="SCENARIO TOGGLES")
+style_section_row(ws_a, 4, MAX_COL)
+
+toggle_font = Font(name="Calibri", size=11, color="006100")
+toggle_fill = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
+
+toggle_items = [
+    (5, "Toll revenue growth method"),
+    (6, "Other revenue growth method"),
+    (7, "Opex % method"),
+    (8, "D&A % method"),
+    (9, "Cost of debt method"),
+    (10, "Tax rate method"),
+]
+for trow, tlabel in toggle_items:
+    ws_a.cell(row=trow, column=LABEL_COL, value=tlabel).font = normal_font
+    cell_b = ws_a.cell(row=trow, column=UNIT_COL, value="Forecast")
+    cell_b.font = toggle_font
+    cell_b.fill = toggle_fill
+
+# Row 12: Column headers
+r = 12
 ws_a.cell(row=r, column=LABEL_COL, value="Assumption / Driver")
 ws_a.cell(row=r, column=UNIT_COL, value="Unit")
 for i, fy in enumerate(FY_LABELS):
     ws_a.cell(row=r, column=HIST_START + i, value=fy)
 style_header_row(ws_a, r, MAX_COL)
 
-# ---- Revenue assumptions ----
-# Historical toll revenue growth (derived), forecast assumptions (input)
-# Historical data (approximate, sourced from Transurban annual reports)
 
-assumptions = [
-    # (label, unit, [FY21..FY30 values], is_pct, is_section_header)
-    ("REVENUE DRIVERS", "", [None]*10, False, True),
-    ("Toll revenue growth", "%", [-4.2, 15.1, 22.1, 8.7, 6.2, 5.5, 5.0, 4.5, 4.0, 3.8], True, False),
-    ("Other revenue growth", "%", [2.0, -2.5, 6.8, -1.8, 10.4, 3.0, 3.0, 3.0, 3.0, 3.0], True, False),
-    ("", "", [None]*10, False, False),
-    ("OPERATING COST DRIVERS", "", [None]*10, False, True),
-    ("Opex as % of revenue", "%", [35.2, 32.5, 31.5, 30.7, 30.8, 30.5, 30.0, 29.5, 29.0, 28.8], True, False),
-    ("Employee costs as % of revenue", "%", [8.5, 8.0, 7.4, 7.3, 7.2, 7.2, 7.0, 6.9, 6.8, 6.7], True, False),
-    ("", "", [None]*10, False, False),
-    ("DEPRECIATION & AMORTISATION", "", [None]*10, False, True),
-    ("D&A as % of non-current assets", "%", [2.7, 2.7, 2.7, 2.7, 2.8, 2.8, 2.8, 2.8, 2.8, 2.8], True, False),
-    ("", "", [None]*10, False, False),
-    ("FINANCING ASSUMPTIONS", "", [None]*10, False, True),
-    ("Average cost of debt", "%", [4.6, 4.0, 4.2, 4.5, 4.6, 4.7, 4.7, 4.8, 4.8, 4.8], True, False),
-    ("Effective tax rate", "%", [-1.5, 14.0, 14.3, 14.4, 15.0, 15.0, 15.0, 15.0, 15.0, 15.0], True, False),
-    ("", "", [None]*10, False, False),
-    ("BALANCE SHEET DRIVERS", "", [None]*10, False, True),
-    ("Capex (maintenance + growth)", "A$m", [628, 1_092, 1_805, 1_420, 1_200, 1_300, 1_350, 1_400, 1_250, 1_200], False, False),
-    ("Trade receivables days", "days", [28, 26, 25, 24, 24, 24, 24, 24, 24, 24], False, False),
-    ("Trade payables days", "days", [55, 52, 50, 48, 48, 48, 48, 48, 48, 48], False, False),
-    ("", "", [None]*10, False, False),
-    ("CASH FLOW / CAPITAL STRUCTURE", "", [None]*10, False, True),
-    ("Dividend per security (DPS)", "A¢", [41.0, 53.0, 62.0, 64.5, 66.0, 68.0, 70.0, 72.0, 74.0, 76.0], False, False),
-    ("Securities on issue (approx)", "m", [1_932, 1_948, 1_964, 1_978, 1_990, 2_000, 2_010, 2_020, 2_025, 2_030], False, False),
-    ("Net debt issuance / (repayment)", "A$m", [1_200, 2_050, 2_800, 600, 300, 400, 350, 300, 200, 100], False, False),
-]
+def _write_values(ws, row, vals, is_pct, fmt=None):
+    """Write a list of 10 values to columns C-L."""
+    for i, v in enumerate(vals):
+        col = HIST_START + i
+        cell = ws.cell(row=row, column=col)
+        if v is not None:
+            if is_pct:
+                cell.value = v / 100.0
+                cell.number_format = pct_fmt
+            else:
+                cell.value = v
+                cell.number_format = fmt if fmt else num_fmt
+            cell.font = input_font if col >= FC_START else normal_font
+            if col >= FC_START:
+                cell.fill = forecast_fill
 
-r = 5
-for label, unit, vals, is_pct, is_section in assumptions:
-    ws_a.cell(row=r, column=LABEL_COL, value=label)
-    ws_a.cell(row=r, column=UNIT_COL, value=unit)
-    if is_section:
-        style_section_row(ws_a, r, MAX_COL)
-    else:
-        for i, v in enumerate(vals):
-            col = HIST_START + i
-            cell = ws_a.cell(row=r, column=col)
-            if v is not None:
-                if is_pct:
-                    cell.value = v / 100.0
-                    cell.number_format = pct_fmt
-                else:
-                    cell.value = v
-                    cell.number_format = num_fmt
-                cell.font = input_font if col >= FC_START else normal_font
-                if col >= FC_START:
-                    cell.fill = forecast_fill
-    r += 1
 
-# Store assumption rows for referencing from other sheets
-# We'll just hard-code the references since we know the layout.
-# Assumptions sheet row map (0-indexed from row 5):
-AROW_TOLL_GR = 6   # Toll revenue growth
-AROW_OTHER_GR = 7  # Other revenue growth
-AROW_OPEX_PCT = 10  # Opex as % of revenue
-AROW_DA_PCT = 14    # D&A as % of NCA
-AROW_COD = 17       # Avg cost of debt
-AROW_TAX = 18       # Effective tax rate
-AROW_CAPEX = 21     # Capex
-AROW_REC_DAYS = 22  # Receivable days
-AROW_PAY_DAYS = 23  # Payable days
-AROW_DPS = 26       # DPS
-AROW_SHARES = 27    # Shares on issue
-AROW_NET_DEBT = 28  # Net debt issuance
+def _write_active_row(ws, active_row, input_row, toggle_cell):
+    """Write an active row: hist cols reference input, forecast cols use IF."""
+    for i in range(5):  # historical FY21-FY25 (cols C-G)
+        col = HIST_START + i
+        cl = get_column_letter(col)
+        cell = ws.cell(row=active_row, column=col)
+        cell.value = f"={cl}{input_row}"
+        cell.number_format = pct_fmt
+        cell.font = normal_font
+    for i in range(5):  # forecast FY26-FY30 (cols H-L)
+        col = FC_START + i
+        cl = get_column_letter(col)
+        # Last 3 hist cols are E, F, G (FY23-FY25)
+        cell = ws.cell(row=active_row, column=col)
+        cell.value = f'=IF({toggle_cell}="3yr Avg",AVERAGE(E{input_row}:G{input_row}),{cl}{input_row})'
+        cell.number_format = pct_fmt
+        cell.font = input_font
+        cell.fill = forecast_fill
 
-set_col_widths(ws_a, {"A": 36, "B": 10})
+
+# Row 14: REVENUE DRIVERS
+ws_a.cell(row=14, column=LABEL_COL, value="REVENUE DRIVERS")
+style_section_row(ws_a, 14, MAX_COL)
+
+# Row 15: Toll revenue growth (input)
+ws_a.cell(row=15, column=LABEL_COL, value="Toll revenue growth (input)")
+ws_a.cell(row=15, column=UNIT_COL, value="%")
+_write_values(ws_a, 15, [-4.2, 15.1, 22.1, 8.7, 6.2, 5.5, 5.0, 4.5, 4.0, 3.8], True)
+
+# Row 16: Toll revenue growth (active)
+ws_a.cell(row=16, column=LABEL_COL, value="Toll revenue growth (active)")
+ws_a.cell(row=16, column=UNIT_COL, value="%")
+_write_active_row(ws_a, 16, 15, "$B$5")
+
+# Row 17: Other revenue growth (input)
+ws_a.cell(row=17, column=LABEL_COL, value="Other revenue growth (input)")
+ws_a.cell(row=17, column=UNIT_COL, value="%")
+_write_values(ws_a, 17, [2.0, -2.5, 6.8, -1.8, 10.4, 3.0, 3.0, 3.0, 3.0, 3.0], True)
+
+# Row 18: Other revenue growth (active)
+ws_a.cell(row=18, column=LABEL_COL, value="Other revenue growth (active)")
+ws_a.cell(row=18, column=UNIT_COL, value="%")
+_write_active_row(ws_a, 18, 17, "$B$6")
+
+# Row 20: OPERATING COST DRIVERS
+ws_a.cell(row=20, column=LABEL_COL, value="OPERATING COST DRIVERS")
+style_section_row(ws_a, 20, MAX_COL)
+
+# Row 21: Opex as % of revenue (input)
+ws_a.cell(row=21, column=LABEL_COL, value="Opex as % of revenue (input)")
+ws_a.cell(row=21, column=UNIT_COL, value="%")
+_write_values(ws_a, 21, [35.2, 32.5, 31.5, 30.7, 30.8, 30.5, 30.0, 29.5, 29.0, 28.8], True)
+
+# Row 22: Opex as % of revenue (active)
+ws_a.cell(row=22, column=LABEL_COL, value="Opex as % of revenue (active)")
+ws_a.cell(row=22, column=UNIT_COL, value="%")
+_write_active_row(ws_a, 22, 21, "$B$7")
+
+# Row 23: Employee costs as % of revenue
+ws_a.cell(row=23, column=LABEL_COL, value="Employee costs as % of revenue")
+ws_a.cell(row=23, column=UNIT_COL, value="%")
+_write_values(ws_a, 23, [8.5, 8.0, 7.4, 7.3, 7.2, 7.2, 7.0, 6.9, 6.8, 6.7], True)
+
+# Row 24: Employee costs share of total opex
+ws_a.cell(row=24, column=LABEL_COL, value="Employee costs share of total opex")
+ws_a.cell(row=24, column=UNIT_COL, value="%")
+_write_values(ws_a, 24, [24, 25, 24, 24, 23, 25, 25, 25, 25, 25], True)
+
+# Row 25: Road ops share of total opex
+ws_a.cell(row=25, column=LABEL_COL, value="Road ops share of total opex")
+ws_a.cell(row=25, column=UNIT_COL, value="%")
+_write_values(ws_a, 25, [34, 33, 33, 32, 31, 33, 33, 33, 33, 33], True)
+
+# Row 27: DEPRECIATION & AMORTISATION
+ws_a.cell(row=27, column=LABEL_COL, value="DEPRECIATION & AMORTISATION")
+style_section_row(ws_a, 27, MAX_COL)
+
+# Row 28: D&A as % of NCA (input)
+ws_a.cell(row=28, column=LABEL_COL, value="D&A as % of NCA (input)")
+ws_a.cell(row=28, column=UNIT_COL, value="%")
+_write_values(ws_a, 28, [2.7, 2.7, 2.7, 2.7, 2.8, 2.8, 2.8, 2.8, 2.8, 2.8], True)
+
+# Row 29: D&A as % of NCA (active)
+ws_a.cell(row=29, column=LABEL_COL, value="D&A as % of NCA (active)")
+ws_a.cell(row=29, column=UNIT_COL, value="%")
+_write_active_row(ws_a, 29, 28, "$B$8")
+
+# Row 30: D&A allocation to PP&E
+ws_a.cell(row=30, column=LABEL_COL, value="D&A allocation to PP&E")
+ws_a.cell(row=30, column=UNIT_COL, value="%")
+_write_values(ws_a, 30, [40, 40, 40, 40, 40, 40, 40, 40, 40, 40], True)
+
+# Row 31: D&A allocation to intangibles
+ws_a.cell(row=31, column=LABEL_COL, value="D&A allocation to intangibles")
+ws_a.cell(row=31, column=UNIT_COL, value="%")
+_write_values(ws_a, 31, [60, 60, 60, 60, 60, 60, 60, 60, 60, 60], True)
+
+# Row 33: FINANCING ASSUMPTIONS
+ws_a.cell(row=33, column=LABEL_COL, value="FINANCING ASSUMPTIONS")
+style_section_row(ws_a, 33, MAX_COL)
+
+# Row 34: Average cost of debt (input)
+ws_a.cell(row=34, column=LABEL_COL, value="Average cost of debt (input)")
+ws_a.cell(row=34, column=UNIT_COL, value="%")
+_write_values(ws_a, 34, [4.6, 4.0, 4.2, 4.5, 4.6, 4.7, 4.7, 4.8, 4.8, 4.8], True)
+
+# Row 35: Average cost of debt (active)
+ws_a.cell(row=35, column=LABEL_COL, value="Average cost of debt (active)")
+ws_a.cell(row=35, column=UNIT_COL, value="%")
+_write_active_row(ws_a, 35, 34, "$B$9")
+
+# Row 36: Effective tax rate (input)
+ws_a.cell(row=36, column=LABEL_COL, value="Effective tax rate (input)")
+ws_a.cell(row=36, column=UNIT_COL, value="%")
+_write_values(ws_a, 36, [-1.5, 14.0, 14.3, 14.4, 15.0, 15.0, 15.0, 15.0, 15.0, 15.0], True)
+
+# Row 37: Effective tax rate (active)
+ws_a.cell(row=37, column=LABEL_COL, value="Effective tax rate (active)")
+ws_a.cell(row=37, column=UNIT_COL, value="%")
+_write_active_row(ws_a, 37, 36, "$B$10")
+
+# Row 38: Statutory tax rate
+ws_a.cell(row=38, column=LABEL_COL, value="Statutory tax rate")
+ws_a.cell(row=38, column=UNIT_COL, value="%")
+_write_values(ws_a, 38, [30, 30, 30, 30, 30, 30, 30, 30, 30, 30], True)
+
+# Row 39: Current borrowings as % of total debt
+ws_a.cell(row=39, column=LABEL_COL, value="Current borrowings as % of total debt")
+ws_a.cell(row=39, column=UNIT_COL, value="%")
+_write_values(ws_a, 39, [6, 5.5, 5.5, 5, 5, 5, 5, 5, 5, 5], True)
+
+# Row 40: DRP / dilution rate
+ws_a.cell(row=40, column=LABEL_COL, value="DRP / dilution rate")
+ws_a.cell(row=40, column=UNIT_COL, value="%")
+_write_values(ws_a, 40, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], True)
+
+# Row 42: BALANCE SHEET DRIVERS
+ws_a.cell(row=42, column=LABEL_COL, value="BALANCE SHEET DRIVERS")
+style_section_row(ws_a, 42, MAX_COL)
+
+# Row 43: Capex
+ws_a.cell(row=43, column=LABEL_COL, value="Capex (maintenance + growth)")
+ws_a.cell(row=43, column=UNIT_COL, value="A$m")
+_write_values(ws_a, 43, [628, 1_092, 1_805, 1_420, 1_200, 1_300, 1_350, 1_400, 1_250, 1_200], False)
+
+# Row 44: Trade receivables days
+ws_a.cell(row=44, column=LABEL_COL, value="Trade receivables days")
+ws_a.cell(row=44, column=UNIT_COL, value="days")
+_write_values(ws_a, 44, [28, 26, 25, 24, 24, 24, 24, 24, 24, 24], False)
+
+# Row 45: Trade payables days
+ws_a.cell(row=45, column=LABEL_COL, value="Trade payables days")
+ws_a.cell(row=45, column=UNIT_COL, value="days")
+_write_values(ws_a, 45, [55, 52, 50, 48, 48, 48, 48, 48, 48, 48], False)
+
+# Row 46: Other current assets growth rate
+ws_a.cell(row=46, column=LABEL_COL, value="Other current assets growth rate")
+ws_a.cell(row=46, column=UNIT_COL, value="%")
+_write_values(ws_a, 46, [3, 3, 3, 3, 3, 3, 3, 3, 3, 3], True)
+
+# Row 47: JV investments growth rate
+ws_a.cell(row=47, column=LABEL_COL, value="JV investments growth rate")
+ws_a.cell(row=47, column=UNIT_COL, value="%")
+_write_values(ws_a, 47, [-2, -2, -2, -2, -2, -2, -2, -2, -2, -2], True)
+
+# Row 48: Other NCA growth rate
+ws_a.cell(row=48, column=LABEL_COL, value="Other NCA growth rate")
+ws_a.cell(row=48, column=UNIT_COL, value="%")
+_write_values(ws_a, 48, [2, 2, 2, 2, 2, 2, 2, 2, 2, 2], True)
+
+# Row 49: Other current liabilities growth rate
+ws_a.cell(row=49, column=LABEL_COL, value="Other current liabilities growth rate")
+ws_a.cell(row=49, column=UNIT_COL, value="%")
+_write_values(ws_a, 49, [3, 3, 3, 3, 3, 3, 3, 3, 3, 3], True)
+
+# Row 50: Other NCL growth rate
+ws_a.cell(row=50, column=LABEL_COL, value="Other NCL growth rate")
+ws_a.cell(row=50, column=UNIT_COL, value="%")
+_write_values(ws_a, 50, [2, 2, 2, 2, 2, 2, 2, 2, 2, 2], True)
+
+# Row 52: CASH FLOW / CAPITAL STRUCTURE
+ws_a.cell(row=52, column=LABEL_COL, value="CASH FLOW / CAPITAL STRUCTURE")
+style_section_row(ws_a, 52, MAX_COL)
+
+# Row 53: DPS
+ws_a.cell(row=53, column=LABEL_COL, value="Dividend per security (DPS)")
+ws_a.cell(row=53, column=UNIT_COL, value="A¢")
+_write_values(ws_a, 53, [41.0, 53.0, 62.0, 64.5, 66.0, 68.0, 70.0, 72.0, 74.0, 76.0], False, num_fmt_1dp)
+
+# Row 54: Securities on issue
+ws_a.cell(row=54, column=LABEL_COL, value="Securities on issue (approx)")
+ws_a.cell(row=54, column=UNIT_COL, value="m")
+_write_values(ws_a, 54, [1_932, 1_948, 1_964, 1_978, 1_990, 2_000, 2_010, 2_020, 2_025, 2_030], False)
+
+# Row 55: Net debt issuance
+ws_a.cell(row=55, column=LABEL_COL, value="Net debt issuance / (repayment)")
+ws_a.cell(row=55, column=UNIT_COL, value="A$m")
+_write_values(ws_a, 55, [1_200, 2_050, 2_800, 600, 300, 400, 350, 300, 200, 100], False)
+
+# Row 56: Other operating adj. growth rate
+ws_a.cell(row=56, column=LABEL_COL, value="Other operating adj. growth rate")
+ws_a.cell(row=56, column=UNIT_COL, value="%")
+_write_values(ws_a, 56, [2, 2, 2, 2, 2, 2, 2, 2, 2, 2], True)
+
+# Row 57: Equity issuance rate (DRP)
+ws_a.cell(row=57, column=LABEL_COL, value="Equity issuance rate (DRP)")
+ws_a.cell(row=57, column=UNIT_COL, value="%")
+_write_values(ws_a, 57, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], True)
+
+# Row 59: NOTES ASSUMPTIONS
+ws_a.cell(row=59, column=LABEL_COL, value="NOTES ASSUMPTIONS")
+style_section_row(ws_a, 59, MAX_COL)
+
+# Row 60: Construction revenue growth
+ws_a.cell(row=60, column=LABEL_COL, value="Construction revenue growth")
+ws_a.cell(row=60, column=UNIT_COL, value="%")
+_write_values(ws_a, 60, [3, 3, 3, 3, 3, 3, 3, 3, 3, 3], True)
+
+# Row 61: Debt maturity 1-2yr as % of total
+ws_a.cell(row=61, column=LABEL_COL, value="Debt maturity 1-2yr as % of total")
+ws_a.cell(row=61, column=UNIT_COL, value="%")
+_write_values(ws_a, 61, [5.3, 4.9, 4.8, 4.7, 4.2, 5, 5, 5, 5, 5], True)
+
+# Row 62: Debt maturity 2-5yr as % of total
+ws_a.cell(row=62, column=LABEL_COL, value="Debt maturity 2-5yr as % of total")
+ws_a.cell(row=62, column=UNIT_COL, value="%")
+_write_values(ws_a, 62, [25, 22, 22, 26, 26, 26, 26, 26, 26, 26], True)
+
+# Row 63: Capitalised borrowing costs factor
+ws_a.cell(row=63, column=LABEL_COL, value="Capitalised borrowing costs factor")
+ws_a.cell(row=63, column=UNIT_COL, value="%")
+_write_values(ws_a, 63, [15, 15, 15, 15, 15, 15, 15, 15, 15, 15], True)
+
+# Row 64: Forecast non-deductible amortisation
+ws_a.cell(row=64, column=LABEL_COL, value="Forecast non-deductible amortisation")
+ws_a.cell(row=64, column=UNIT_COL, value="A$m")
+_write_values(ws_a, 64, [190, 190, 190, 190, 190, 190, 190, 190, 190, 190], False)
+
+# Row 65: Forecast tax concessions
+ws_a.cell(row=65, column=LABEL_COL, value="Forecast tax concessions")
+ws_a.cell(row=65, column=UNIT_COL, value="A$m")
+_write_values(ws_a, 65, [-40, -40, -40, -40, -40, -40, -40, -40, -40, -40], False)
+
+# Row 66: Forecast other perm. differences
+ws_a.cell(row=66, column=LABEL_COL, value="Forecast other perm. differences")
+ws_a.cell(row=66, column=UNIT_COL, value="A$m")
+_write_values(ws_a, 66, [8, 8, 8, 8, 8, 8, 8, 8, 8, 8], False)
+
+# Row 67: Capital commitments multiple of capex
+ws_a.cell(row=67, column=LABEL_COL, value="Capital commitments multiple of capex")
+ws_a.cell(row=67, column=UNIT_COL, value="x")
+_write_values(ws_a, 67, [1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2], False, num_fmt_1dp)
+
+# Row 68: Operating lease growth rate
+ws_a.cell(row=68, column=LABEL_COL, value="Operating lease growth rate")
+ws_a.cell(row=68, column=UNIT_COL, value="%")
+_write_values(ws_a, 68, [3, 3, 3, 3, 3, 3, 3, 3, 3, 3], True)
+
+# Row 69: Forecast contingent liabilities
+ws_a.cell(row=69, column=LABEL_COL, value="Forecast contingent liabilities")
+ws_a.cell(row=69, column=UNIT_COL, value="A$m")
+_write_values(ws_a, 69, [170, 170, 170, 170, 170, 170, 170, 170, 170, 170], False)
+
+# Store assumption row constants for referencing from other sheets
+AROW_TOLL_GR = 16        # Toll revenue growth (active)
+AROW_OTHER_GR = 18       # Other revenue growth (active)
+AROW_OPEX_PCT = 22       # Opex % (active)
+AROW_EMP_PCT = 23        # Employee costs % of revenue
+AROW_EMP_SHARE = 24      # Employee costs share of total opex
+AROW_ROAD_SHARE = 25     # Road ops share of total opex
+AROW_DA_PCT = 29         # D&A % of NCA (active)
+AROW_DA_PPE = 30         # D&A allocation to PP&E
+AROW_DA_INTANG = 31      # D&A allocation to intangibles
+AROW_COD = 35            # Avg cost of debt (active)
+AROW_TAX = 37            # Effective tax rate (active)
+AROW_STAT_TAX = 38       # Statutory tax rate
+AROW_CURR_BORROW_PCT = 39  # Current borrowings % of total debt
+AROW_DRP_RATE = 40       # DRP / dilution rate
+AROW_CAPEX = 43          # Capex
+AROW_REC_DAYS = 44       # Trade receivables days
+AROW_PAY_DAYS = 45       # Trade payables days
+AROW_OCA_GR = 46         # Other current assets growth
+AROW_JV_GR = 47          # JV investments growth
+AROW_ONCA_GR = 48        # Other NCA growth
+AROW_OCL_GR = 49         # Other current liabilities growth
+AROW_ONCL_GR = 50        # Other NCL growth
+AROW_DPS = 53            # DPS
+AROW_SHARES = 54         # Securities on issue
+AROW_NET_DEBT = 55       # Net debt issuance
+AROW_OTHER_OPS_GR = 56   # Other operating adj. growth
+AROW_EQUITY_ISS = 57     # Equity issuance rate (DRP)
+AROW_CONSTR_GR = 60      # Construction revenue growth
+AROW_MAT_1_2 = 61        # Debt maturity 1-2yr %
+AROW_MAT_2_5 = 62        # Debt maturity 2-5yr %
+AROW_CAP_BORR = 63       # Capitalised borrowing costs factor
+AROW_NON_DED = 64        # Non-deductible amortisation
+AROW_TAX_CONC = 65       # Tax concessions
+AROW_OTHER_PERM = 66     # Other perm differences
+AROW_CAP_COMMIT = 67     # Capital commitments multiple
+AROW_OP_LEASE_GR = 68    # Operating lease growth
+AROW_CONTINGENT = 69     # Contingent liabilities
+
+set_col_widths(ws_a, {"A": 40, "B": 10})
 for i in range(HIST_START, MAX_COL + 1):
     ws_a.column_dimensions[get_column_letter(i)].width = 14
 
@@ -382,11 +653,11 @@ for fc_idx in range(5):
     cl = get_column_letter(col)
 
     # Employee costs = revenue * employee cost %
-    formula = f"=-{cl}{row_trev}*Assumptions!{cl}{AROW_OPEX_PCT}*0.25"
+    formula = f"=-{cl}{row_trev}*Assumptions!{cl}{AROW_OPEX_PCT}*Assumptions!{cl}{AROW_EMP_SHARE}"
     ws_is.cell(row=row_emp, column=col, value=formula).number_format = acct_fmt
 
     # Road operating costs ≈ 33% of total opex
-    formula = f"=-{cl}{row_trev}*Assumptions!{cl}{AROW_OPEX_PCT}*0.33"
+    formula = f"=-{cl}{row_trev}*Assumptions!{cl}{AROW_OPEX_PCT}*Assumptions!{cl}{AROW_ROAD_SHARE}"
     ws_is.cell(row=row_road, column=col, value=formula).number_format = acct_fmt
 
     # Corporate & admin = remainder  (opex% * rev) - employee - road ops
@@ -628,7 +899,7 @@ for fc_idx in range(5):
 
     # Other current assets: grow at 3% p.a.
     ws_bs.cell(row=row_oca, column=col,
-               value=f"={prev_cl}{row_oca}*1.03").number_format = acct_fmt
+               value=f"={prev_cl}{row_oca}*(1+Assumptions!{cl}{AROW_OCA_GR})").number_format = acct_fmt
 
     # Total CA
     ws_bs.cell(row=row_tca, column=col,
@@ -636,19 +907,19 @@ for fc_idx in range(5):
 
     # PP&E = prior PP&E + capex + D&A (D&A is negative, so adding reduces)
     ws_bs.cell(row=row_ppe, column=col,
-               value=f"={prev_cl}{row_ppe}+Assumptions!{cl}{AROW_CAPEX}+'Income Statement'!{cl}{IS_ROW_DA}*0.40").number_format = acct_fmt
+               value=f"={prev_cl}{row_ppe}+Assumptions!{cl}{AROW_CAPEX}+'Income Statement'!{cl}{IS_ROW_DA}*Assumptions!{cl}{AROW_DA_PPE}").number_format = acct_fmt
 
     # Intangibles = prior - amortisation (60% of D&A allocated to intangibles)
     ws_bs.cell(row=row_intang, column=col,
-               value=f"={prev_cl}{row_intang}+'Income Statement'!{cl}{IS_ROW_DA}*0.60").number_format = acct_fmt
+               value=f"={prev_cl}{row_intang}+'Income Statement'!{cl}{IS_ROW_DA}*Assumptions!{cl}{AROW_DA_INTANG}").number_format = acct_fmt
 
     # JV investments: stable, slight decline
     ws_bs.cell(row=row_jv, column=col,
-               value=f"={prev_cl}{row_jv}*0.98").number_format = acct_fmt
+               value=f"={prev_cl}{row_jv}*(1+Assumptions!{cl}{AROW_JV_GR})").number_format = acct_fmt
 
     # Other NCA: grow at 2%
     ws_bs.cell(row=row_onca, column=col,
-               value=f"={prev_cl}{row_onca}*1.02").number_format = acct_fmt
+               value=f"={prev_cl}{row_onca}*(1+Assumptions!{cl}{AROW_ONCA_GR})").number_format = acct_fmt
 
     # Total NCA
     ws_bs.cell(row=row_tnca, column=col,
@@ -666,11 +937,11 @@ for fc_idx in range(5):
 
     # Current borrowings: assume stable proportion (~5% of total debt)
     ws_bs.cell(row=row_cd, column=col,
-               value=f"=({prev_cl}{row_tb}+Assumptions!{cl}{AROW_NET_DEBT})*0.05").number_format = acct_fmt
+               value=f"=({prev_cl}{row_tb}+Assumptions!{cl}{AROW_NET_DEBT})*Assumptions!{cl}{AROW_CURR_BORROW_PCT}").number_format = acct_fmt
 
     # Other current liabilities: grow at 3%
     ws_bs.cell(row=row_ocl, column=col,
-               value=f"={prev_cl}{row_ocl}*1.03").number_format = acct_fmt
+               value=f"={prev_cl}{row_ocl}*(1+Assumptions!{cl}{AROW_OCL_GR})").number_format = acct_fmt
 
     # Total CL
     ws_bs.cell(row=row_tcl, column=col,
@@ -682,7 +953,7 @@ for fc_idx in range(5):
 
     # Other NCL: grow at 2%
     ws_bs.cell(row=row_oncl, column=col,
-               value=f"={prev_cl}{row_oncl}*1.02").number_format = acct_fmt
+               value=f"={prev_cl}{row_oncl}*(1+Assumptions!{cl}{AROW_ONCL_GR})").number_format = acct_fmt
 
     # Total NCL
     ws_bs.cell(row=row_tncl, column=col,
@@ -699,7 +970,7 @@ for fc_idx in range(5):
     # -- EQUITY --
     # Share capital: prior + assumed equity raise (DRP ~1% dilution)
     ws_bs.cell(row=row_sc, column=col,
-               value=f"={prev_cl}{row_sc}*(1+0.01)").number_format = acct_fmt
+               value=f"={prev_cl}{row_sc}*(1+Assumptions!{cl}{AROW_DRP_RATE})").number_format = acct_fmt
 
     # Retained earnings = prior RE + NPAT - dividends paid
     # Dividends = DPS * shares / 100 (DPS in cents)
@@ -866,7 +1137,7 @@ for fc_idx in range(5):
 
     # Other operating adjustments: held stable
     ws_cf.cell(row=cf_other_ops_row, column=col,
-               value=f"={prev_cl}{cf_other_ops_row}*1.02").number_format = acct_fmt
+               value=f"={prev_cl}{cf_other_ops_row}*(1+Assumptions!{cl}{AROW_OTHER_OPS_GR})").number_format = acct_fmt
 
     # Net CFO
     ws_cf.cell(row=cf_net_ops_row, column=col,
@@ -896,7 +1167,7 @@ for fc_idx in range(5):
 
     # Equity issuance ≈ prior share capital * 1% DRP
     ws_cf.cell(row=cf_equity_row, column=col,
-               value=f"='Balance Sheet'!{prev_cl}{row_sc}*0.01").number_format = acct_fmt
+               value=f"='Balance Sheet'!{prev_cl}{row_sc}*Assumptions!{cl}{AROW_EQUITY_ISS}").number_format = acct_fmt
 
     # Net CFF
     ws_cf.cell(row=cf_net_fin_row, column=col,
@@ -1119,7 +1390,7 @@ for col_idx in range(10):  # FY21-FY30
     # Construction revenue - historical hard-coded, forecast grows at 3%
     if col >= FC_START:
         ws_notes.cell(row=row_construction, column=col,
-                      value=f"={prev_cl}{row_construction}*1.03").number_format = acct_fmt
+                      value=f"={prev_cl}{row_construction}*(1+Assumptions!{cl}{AROW_CONSTR_GR})").number_format = acct_fmt
     
     # Other revenue - link to IS
     ws_notes.cell(row=row_other_rev, column=col,
@@ -1183,7 +1454,7 @@ for col_idx in range(10):  # FY21-FY30
     
     # Amortisation charge - link to IS D&A * 0.60
     ws_notes.cell(row=row_intang_amort, column=col,
-                  value=f"='Income Statement'!{cl}{IS_ROW['Depreciation & amortisation']}*0.60").number_format = acct_fmt
+                  value=f"='Income Statement'!{cl}{IS_ROW['Depreciation & amortisation']}*Assumptions!{cl}{AROW_DA_INTANG}").number_format = acct_fmt
     
     # Closing balance = Opening + Additions + Amortisation (amort is negative)
     ws_notes.cell(row=row_intang_close, column=col,
@@ -1226,12 +1497,12 @@ for col_idx in range(10):  # FY21-FY30
     # 1-2 years - historical hard-coded, forecast = 5% of total
     if col >= FC_START:
         ws_notes.cell(row=row_mat_1_2, column=col,
-                      value=f"={cl}{row_total_debt}*0.05").number_format = acct_fmt
+                      value=f"={cl}{row_total_debt}*Assumptions!{cl}{AROW_MAT_1_2}").number_format = acct_fmt
     
     # 2-5 years - historical hard-coded, forecast = 26% of total
     if col >= FC_START:
         ws_notes.cell(row=row_mat_2_5, column=col,
-                      value=f"={cl}{row_total_debt}*0.26").number_format = acct_fmt
+                      value=f"={cl}{row_total_debt}*Assumptions!{cl}{AROW_MAT_2_5}").number_format = acct_fmt
     
     # Over 5 years = Total - within 1yr - 1-2yr - 2-5yr
     ws_notes.cell(row=row_mat_over_5, column=col,
@@ -1248,7 +1519,7 @@ for col_idx in range(10):  # FY21-FY30
     # Capitalised borrowing costs - historical hard-coded, forecast formula
     if col >= FC_START:
         ws_notes.cell(row=row_cap_costs, column=col,
-                      value=f"=Assumptions!{cl}{AROW_CAPEX}*Assumptions!{cl}{AROW_COD}*0.15").number_format = acct_fmt
+                      value=f"=Assumptions!{cl}{AROW_CAPEX}*Assumptions!{cl}{AROW_COD}*Assumptions!{cl}{AROW_CAP_BORR}").number_format = acct_fmt
     
     # Effective interest rate - link to Assumptions
     ws_notes.cell(row=row_eff_rate, column=col,
@@ -1275,13 +1546,16 @@ for col_idx in range(10):  # FY21-FY30
     
     # Tax at 30%
     ws_notes.cell(row=row_tax_30, column=col,
-                  value=f"={cl}{row_pbt}*-0.30").number_format = acct_fmt
+                  value=f"={cl}{row_pbt}*-Assumptions!{cl}{AROW_STAT_TAX}").number_format = acct_fmt
     
     # Adjustments - historical hard-coded, forecast holds flat
     if col >= FC_START:
-        ws_notes.cell(row=row_non_ded, column=col, value=190).number_format = acct_fmt
-        ws_notes.cell(row=row_tax_conc, column=col, value=-40).number_format = acct_fmt
-        ws_notes.cell(row=row_other_perm, column=col, value=8).number_format = acct_fmt
+        ws_notes.cell(row=row_non_ded, column=col,
+                      value=f"=Assumptions!{cl}{AROW_NON_DED}").number_format = acct_fmt
+        ws_notes.cell(row=row_tax_conc, column=col,
+                      value=f"=Assumptions!{cl}{AROW_TAX_CONC}").number_format = acct_fmt
+        ws_notes.cell(row=row_other_perm, column=col,
+                      value=f"=Assumptions!{cl}{AROW_OTHER_PERM}").number_format = acct_fmt
     
     # Total tax adjustments
     ws_notes.cell(row=row_total_adj, column=col,
@@ -1343,16 +1617,17 @@ for col_idx in range(10):  # FY21-FY30
     # Capital commitments - historical hard-coded, forecast links to capex
     if col >= FC_START:
         ws_notes.cell(row=row_cap_commit, column=col,
-                      value=f"=Assumptions!{cl}{AROW_CAPEX}*1.2").number_format = acct_fmt
+                      value=f"=Assumptions!{cl}{AROW_CAPEX}*Assumptions!{cl}{AROW_CAP_COMMIT}").number_format = acct_fmt
     
     # Operating lease commitments - historical hard-coded, forecast grows at 3%
     if col >= FC_START:
         ws_notes.cell(row=row_op_lease, column=col,
-                      value=f"={prev_cl}{row_op_lease}*1.03").number_format = acct_fmt
+                      value=f"={prev_cl}{row_op_lease}*(1+Assumptions!{cl}{AROW_OP_LEASE_GR})").number_format = acct_fmt
     
     # Contingent liabilities - historical hard-coded, forecast holds flat
     if col >= FC_START:
-        ws_notes.cell(row=row_contingent, column=col, value=170).number_format = acct_fmt
+        ws_notes.cell(row=row_contingent, column=col,
+                      value=f"=Assumptions!{cl}{AROW_CONTINGENT}").number_format = acct_fmt
 
 # Shade forecast columns for all note rows
 for rr in range(5, r):
